@@ -17,7 +17,7 @@ module.exports = {
       if (!err) {
 
         this.connection = db;
-        this.objectConnection = new mongodb.Collection(this.connection, 
+        this.objectCollection = new mongodb.Collection(this.connection, 
           "object" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
         deferred.resolve(true);
 
@@ -36,9 +36,9 @@ module.exports = {
   createObject: function (opts) {
     var deferred = when.defer();
 
-    this.objectConnection.insert({}, function (err, doc) {
+    this.objectCollection.insert({}, function (err, doc) {
       if (!err) {
-        deferred.resolve(doc.length && doc[0]._id);
+          deferred.resolve(doc.length && doc[0]._id);
       } else {
         deferred.reject(err);
       }
@@ -50,11 +50,16 @@ module.exports = {
   addObjectType: function (id) {
   },
 
-  //TODO: make a proper query object
-  getObjects: function (query) {
+  getObjects: function (request) {
     var deferred = when.defer();
 
-    deferred.resolve({types: [{id: 1}]});
+    var id = request._id.toString();
+    var query = {
+      "_id": mongodb.ObjectID(id)
+    };
+    this.objectCollection.find(query, {limit: 2}).toArray(function (err, docs) {
+      deferred.resolve(docs);
+    });
 
     return deferred.promise;
   }
