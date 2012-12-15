@@ -1,0 +1,17 @@
+{
+  "name": "hiveshare-datastore",
+  "preferGlobal": false,
+  "version": "0.0.1",
+  "author": "William Becker <wbecker@gmail.com>",
+  "main": "server.js",
+  "dependencies": {
+    "mongodb": "1.2.x"
+  },
+  "devDependencies": {
+    "vows"    :  "0.7.x"
+  },
+  "scripts": {
+    "test": "vows --spec"
+  }
+}
+
