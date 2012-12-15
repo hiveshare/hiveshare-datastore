@@ -5,6 +5,8 @@
   "author": "William Becker <wbecker@gmail.com>",
   "main": "server.js",
   "dependencies": {
+    "underscore": "1.4.x",
+    "when": "1.7.x",
     "mongodb": "1.2.x"
   },
   "devDependencies": {
