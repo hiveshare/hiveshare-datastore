@@ -22,6 +22,10 @@ module.exports = {
         this.connection = db;
         this.objectCollection = new mongodb.Collection(this.connection, 
           "object" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
+        this.typeCollection = new mongodb.Collection(this.connection, 
+          "type" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
+        this.objectTypeCollection = new mongodb.Collection(this.connection, 
+          "object_type" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
         deferred.resolve(true);
 
       } else {
@@ -50,22 +54,77 @@ module.exports = {
     return deferred.promise;
   },
 
-  addObjectType: function (id) {
+  addTypeToObject: function (objectId, typeId) {
+    var deferred = when.defer();
+
+    this.objectTypeCollection.insert(
+      {
+        objectId: objectId,
+        typeId: typeId
+      }, 
+      function (err, doc) {
+        if (!err) {
+          deferred.resolve();
+        } else {
+          deferred.reject();
+        }
+      }
+    );
+    
+    return deferred.promise;
   },
 
   getObjects: function (request) {
     var deferred = when.defer();
 
     var id = request._id.toString();
+    this._getObjects(id).then(_.bind(function (objectDocs) {
+      when.map(objectDocs, _.bind(function (doc) {
+        var hsObj = new HiveShareObject(doc._id);
+        var objDeferred = when.defer();
+
+        this._getObjectTypes(id).then(function (types) {
+          _.each(types, function (type) {
+            hsObj.addType({id: type.typeId});
+          });
+          objDeferred.resolve(hsObj);
+        });
+
+        return objDeferred.promise;
+      }, this)).then(function (hsObjs) {
+        deferred.resolve(hsObjs);
+      });
+    }, this));
+
+    return deferred.promise;
+  },
+
+  _getObjects: function (id) {
+    var deferred = when.defer();
+
     var query = {
       "_id": mongodb.ObjectID(id)
     };
-    this.objectCollection.find(query, {limit: 2}).toArray(function (err, docs) {
+    this.objectCollection
+      .find(query, {limit: 2})
+      .toArray(function (err, docs) {
+        deferred.resolve(docs);
+      });
 
-      deferred.resolve(_.map(docs, function (doc) {
-        return new HiveShareObject(doc._id);
-      }));
-    });
+    return deferred.promise;
+  },
+
+  _getObjectTypes: function (id) {
+    var deferred = when.defer();
+
+    var query = {
+      "objectId": mongodb.ObjectID(id)
+    };
+    this.objectTypeCollection
+      .find(query, {limit: 2})
+      .toArray(function (err, docs) {
+        deferred.resolve(docs);
+      });
 
     return deferred.promise;
   }
