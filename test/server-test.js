@@ -34,11 +34,9 @@ buster.testCase("Objects", {
         return server.getObjects({"_id": newId});
       }
     ]).then(function (result) {
-      expected = [{
-        _id: newId
-      }];
       try {
-        assert.equals(result, expected);
+        assert.equals(result.length, 1);
+        assert.equals(result[0].id, newId);
       } finally {
         done();
       }

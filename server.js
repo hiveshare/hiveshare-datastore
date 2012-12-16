@@ -3,6 +3,9 @@ var when = require("when");
 
 var mongodb = require("mongodb");
 
+var HiveShareDataModel = require("hiveshare-datamodel");
+var HiveShareObject = HiveShareDataModel.HiveShareObject;
+
 module.exports = {
 
   start: function (collectionSuffix) {
@@ -58,7 +61,10 @@ module.exports = {
       "_id": mongodb.ObjectID(id)
     };
     this.objectCollection.find(query, {limit: 2}).toArray(function (err, docs) {
-      deferred.resolve(docs);
+
+      deferred.resolve(_.map(docs, function (doc) {
+        return new HiveShareObject(doc._id);
+      }));
     });
 
     return deferred.promise;
