@@ -7,20 +7,20 @@ var server = require("../server.js");
 buster.testCase("Objects", {
 
   "Can be added": function (done) {
-      pipeline([
-        function () {
-          return server.start("test"); 
-        },
-        function () {
-          return server.createObject({});
-        }
-      ]).then(function (id) {
-        assert(!!id);
-        done();
-      });
+    pipeline([
+      function () {
+        return server.start("test"); 
+      },
+      function () {
+        return server.createObject({});
+      }
+    ]).then(function (id) {
+      assert(!!id);
+      done();
+    });
   },
 
-  "Can be queried based on type": function (done) {
+  "Newly created objects can be found": function (done) {
     var newId;
     pipeline([
       function () {
@@ -34,15 +34,9 @@ buster.testCase("Objects", {
         return server.getObjects({"_id": newId});
       }
     ]).then(function (result) {
-      
-      var expected = {
-        types: [{id: newId}]
-      }; 
       expected = [{
         _id: newId
       }];
-      //console.log(JSON.stringify(result));
-      //console.log(expected);
       try {
         assert.equals(result, expected);
       } finally {
