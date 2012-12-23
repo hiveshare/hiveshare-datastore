@@ -41,13 +41,44 @@ module.exports = {
 
   },
 
-  createObject: function (opts) {
+  createObject: function () {
 
     var deferred = when.defer();
 
     this.objectCollection.insert({}, function (err, doc) {
       if (!err) {
-          deferred.resolve(doc.length && doc[0]._id);
+        deferred.resolve(doc.length && doc[0]._id);
+      } else {
+        deferred.reject(err);
+      }
+    });
+
+    return deferred.promise;
+  },
+
+  createType: function () {
+
+    var deferred = when.defer();
+
+    //create object
+    this.createObject().then(_.bind(function (descriptorId) {
+        //create type, with object parameter
+        this._createType(descriptorId).then(deferred.resolve, deferred.reject);
+      }, this), deferred.reject);
+
+    return deferred.promise;
+  },
+
+  _createType: function (descriptorId) {
+    var deferred = when.defer();
+    var typeObj = {
+      descriptor_id: descriptorId
+    };
+
+    this.typeCollection.insert(typeObj, function (err, doc) {
+      if (!err) {
+        var id = doc[0]._id.toString();
+        deferred.resolve(new HiveShareType(id, descriptorId));
       } else {
         deferred.reject(err);
       }
@@ -99,6 +130,7 @@ module.exports = {
 
     var deferred = when.defer();
     var mQuery = {};
+
     if (hsQuery.q.object_id) {
       mQuery._id = mongodb.ObjectID(hsQuery.q.object_id);
     }
@@ -136,6 +168,30 @@ module.exports = {
       .find(query, {limit: 2})
       .toArray(function (err, docs) {
         deferred.resolve(docs);
+      });
+
+    return deferred.promise;
+  },
+
+  getType: function (hsQuery) {
+
+    var deferred = when.defer();
+    var mQuery = {};
+
+    if (hsQuery.q.type_id) {
+      mQuery._id = mongodb.ObjectID(hsQuery.q.type_id);
+    }
+    this.typeCollection
+      .find(mQuery, {limit: 1})
+      .toArray(function (err, docs) {
+        if (docs[0]) {
+          var typeDoc = docs[0];
+          deferred.resolve(
+            new HiveShareType(typeDoc._id, typeDoc.descriptor_id)
+          );
+        } else {
+          deferred.resolve(null);
+        }
       });
 
     return deferred.promise;
