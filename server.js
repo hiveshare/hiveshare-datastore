@@ -61,7 +61,7 @@ module.exports = {
 
     this.objectTypeCollection.insert(
       {
-        objectId: objectId,
+        objectId: mongodb.ObjectID(objectId),
         typeId: typeId
       },
       function (err, doc) {
@@ -76,12 +76,11 @@ module.exports = {
     return deferred.promise;
   },
 
-  getObjects: function (request) {
+  getObjects: function (query) {
 
     var deferred = when.defer();
-    var id = request._id.toString();
 
-    this._getObjects(id).then(_.bind(function (objectDocs) {
+    this._getObjects(query).then(_.bind(function (objectDocs) {
       var hsObjs = _.map(objectDocs, function (doc) {
         return new HiveShareObject(doc._id.toString());
       });
@@ -95,15 +94,15 @@ module.exports = {
     return deferred.promise;
   },
 
-  _getObjects: function (id) {
+  _getObjects: function (hsQuery) {
 
     var deferred = when.defer();
-    var query = {
-      "_id": mongodb.ObjectID(id)
-    };
-
+    var mQuery = {};
+    if (hsQuery.q.object_id) {
+      mQuery._id = mongodb.ObjectID(hsQuery.q.object_id);
+    }
     this.objectCollection
-      .find(query, {limit: 2})
+      .find(mQuery, {limit: 2})
       .toArray(function (err, docs) {
         deferred.resolve(docs);
       });

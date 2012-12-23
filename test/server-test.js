@@ -2,6 +2,8 @@ var _ = require("underscore");
 var buster = require("buster");
 var pipeline = require("when/pipeline");
 
+var Query = require("hiveshare-datamodel").Query;
+
 var server = require("../server.js");
 
 buster.testCase("Objects", {
@@ -9,7 +11,7 @@ buster.testCase("Objects", {
   "Can be added": function (done) {
     pipeline([
       function () {
-        return server.start("test"); 
+        return server.start("test");
       },
       function () {
         return server.createObject({});
@@ -30,8 +32,8 @@ buster.testCase("Objects", {
         return server.createObject({});
       },
       function (id) {
-        newId = id;
-        return server.getObjects({"_id": newId});
+        newId = id.toString();
+        return server.getObjects(new Query().findObjectById(newId));
       }
     ]).then(function (result) {
       try {
@@ -54,11 +56,11 @@ buster.testCase("Objects", {
         return server.createObject({});
       },
       function (id) {
-        newId = id;
+        newId = id.toString();
         return server.addTypeToObject(newId, 1);
       },
       function () {
-        return server.getObjects({"_id": newId});
+        return server.getObjects(new Query().findObjectById(newId));
       }
     ]).then(function (result) {
       try {
