@@ -5,6 +5,7 @@ var mongodb = require("mongodb");
 
 var HiveShareDataModel = require("hiveshare-datamodel");
 var HiveShareObject = HiveShareDataModel.HiveShareObject;
+var HiveShareType = HiveShareDataModel.HiveShareType;
 
 module.exports = {
 
@@ -116,7 +117,7 @@ module.exports = {
 
     this._getObjectTypes(hsObj.id).then(function (types) {
       _.each(types, function (type) {
-        hsObj.addType({id: type.typeId});
+        hsObj.addType(new HiveShareType(type.typeId));
       });
       deferred.resolve(hsObj);
     });
