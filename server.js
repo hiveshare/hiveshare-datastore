@@ -65,6 +65,16 @@ module.exports = {
             }
           }
 
+        },
+
+        "object_values": {
+
+          "map": function (doc) {
+            if (doc.type === "object_value") {
+              emit([doc.object_id, doc.tag_id], doc.value);
+            }
+          }
+
         }
       }
     }, "_design/hiveshare", function (err, body) {
@@ -172,6 +182,30 @@ module.exports = {
     return deferred.promise;
   },
 
+  addTagValueToObject: function (objectId, tagId, tagValue) {
+
+    var deferred = when.defer();
+
+    this.db.insert(
+      {
+        object_id: objectId,
+        tag_id: tagId,
+        value: tagValue,
+        type: "object_value"
+      },
+      null,
+      function (err, doc) {
+        if (!err) {
+          deferred.resolve();
+        } else {
+          deferred.reject();
+        }
+      }
+    );
+
+    return deferred.promise;
+  },
+
   getObjects: function (query) {
 
     var deferred = when.defer();
@@ -207,12 +241,23 @@ module.exports = {
   _getObjectTypes: function (id) {
 
     var deferred = when.defer();
-    var query = {
-      "objectId": id
-    };
+
     this.db.view("hiveshare", "object_types", {key: id}, function (err, body) {
       deferred.resolve(body.rows);
     });
+
+    return deferred.promise;
+  },
+
+  getObjectValue: function (objectId, tagId) {
+
+    var deferred = when.defer();
+
+    this.db.view("hiveshare", "object_values", {key: [objectId, tagId]},
+      function (err, body) {
+        deferred.resolve(body.rows[0].value);
+      }
+    );
 
     return deferred.promise;
   },

@@ -80,34 +80,48 @@ buster.testCase("HiveShare Data Model", {
 
     },
 
-    "//Can add a tag value to an object which has the tag": function (done) {
+    "Can add a tag value to an object which has the tag": function (done) {
 
-      // var newObjectId, newTypeId;
+      var newObjectId, newTypeId, newTagId;
 
-      // pipeline([
-      //   function () {
-      //     return server.start("test");
-      //   },
-      //   function () {
-      //     return server.createObject();
-      //   },
-      //   function (objectId) {
-      //     newObjectId = objectId;
-      //     return server.createType();
-      //   },
-      //   function (type) {
-      //     newTypeId = type.id;
-      //     return server.addTypeToObject(newObjectId, newTypeId);
-      //   },
-      //   function () {
-      //     return server.getObjects(new Query().findObjectById(newId));
-      //   }
-      // ]).then(function (result) {
-      //   try {
-      //   } finally {
-      //     done();
-      //   }
-      // }, logError(done));
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createObject();
+        },
+        function (objectId) {
+          newObjectId = objectId;
+          return server.createType();
+        },
+        function (type) {
+          newTypeId = type.id;
+          return server.addTypeToObject(newObjectId, newTypeId);
+        },
+
+        function () {
+          return server.createTag();
+        },
+        function (tag) {
+          newTagId = tag.id;
+          return server.addTagToType(newTypeId, newTagId);
+        },
+
+        function () {
+          return server.addTagValueToObject(newObjectId, newTagId, "tagvalue");
+        },
+
+        function () {
+          return server.getObjectValue(newObjectId, newTagId);
+        }
+      ]).then(function (result) {
+        try {
+          assert.equals(result, "tagvalue");
+        } finally {
+          done();
+        }
+      }, logError(done));
     },
 
     "//Cannot add a tag value to an object which does not have the tag": function () {
