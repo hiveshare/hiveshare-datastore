@@ -99,7 +99,6 @@ buster.testCase("HiveShare Data Model", {
           newTypeId = type.id;
           return server.addTypeToObject(newObjectId, newTypeId);
         },
-
         function () {
           return server.createTag(newTypeId);
         },
@@ -107,13 +106,13 @@ buster.testCase("HiveShare Data Model", {
           newTagId = tag.id;
           return server.addTagToType(newTypeId, newTagId);
         },
-
         function () {
-          return server.addTagValueToObject(newObjectId, newTagId, "tagvalue");
+          return server.addTagValueToObject(newObjectId, newTagId, newTypeId,
+            "tagvalue");
         },
 
         function () {
-          return server.getObjectValue(newObjectId, newTagId);
+          return server.getObjectValue(newObjectId, newTagId, newTypeId);
         }
       ]).then(function (result) {
         try {
@@ -124,8 +123,28 @@ buster.testCase("HiveShare Data Model", {
       }, logError(done));
     },
 
-    "//Cannot add a tag value to an object which does not have the tag": function () {
+    "Cannot add a tag value to an object which does not have the tag": function (done) {
 
+      var newObjectId, newTypeId, newTagId;
+
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createObject();
+        },
+        function (newObjectId) {
+          return server.addTagValueToObject(newObjectId, "some tag id",
+            "some type id", "tagvalue");
+        }
+      ]).then(function (result) {
+        assert(false);
+        done();
+      }, function (err) {
+        assert(err);
+        done();
+      });
     },
 
     "//Can only add tag values of the correct type": function () {
@@ -214,7 +233,7 @@ buster.testCase("HiveShare Data Model", {
   "Tags": {
 
     "Newly created tags can be found": function (done) {
-      var newTag;
+      var newTag, type;
       pipeline([
         function () {
           return server.start("test");
@@ -223,11 +242,12 @@ buster.testCase("HiveShare Data Model", {
           return server.createType();
         },
         function (typeObj) {
+          type = typeObj;
           return server.createTag(typeObj.id);
         },
         function (tagObj) {
           newTag = tagObj;
-          return server.getTag(new Query().findTagById(newTag.id));
+          return server.getTag(new Query().findTagById(newTag.id, type.id));
         }
       ]).then(function (result) {
         try {

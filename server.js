@@ -71,7 +71,7 @@ module.exports = {
 
           "map": function (doc) {
             if (doc.type === "object_value") {
-              emit([doc.object_id, doc.tag_id], doc.value);
+              emit([doc.object_id, doc.tag_id, doc.type_id], doc.value);
             }
           }
 
@@ -152,7 +152,7 @@ module.exports = {
         _.bind(this.createObject, this),
 
         _.bind(function (id) {
-          tagObject = new HiveShareTag(id);
+          tagObject = new HiveShareTag(id, typeId);
           return this.addTypeToObject(id, HiveShareDataModel.TAG_TYPE_ID);
         }, this),
 
@@ -194,26 +194,43 @@ module.exports = {
     return deferred.promise;
   },
 
-  addTagValueToObject: function (objectId, tagId, tagValue) {
+  addTagValueToObject: function (objectId, tagId, typeId, tagValue) {
 
     var deferred = when.defer();
 
-    this.db.insert(
-      {
-        object_id: objectId,
-        tag_id: tagId,
-        value: tagValue,
-        type: "object_value"
-      },
-      null,
-      function (err, doc) {
-        if (!err) {
-          deferred.resolve();
-        } else {
-          deferred.reject();
+    var hasType = function (types) {
+      return _.find(types, function (type) {
+        return type.id === typeId;
+      });
+    };
+
+    var insertRecord = _.bind(function () {
+      this.db.insert(
+        {
+          object_id: objectId,
+          tag_id: tagId,
+          type_id: typeId,
+          value: tagValue,
+          type: "object_value"
+        },
+        null,
+        function (err, doc) {
+          if (!err) {
+            deferred.resolve();
+          } else {
+            deferred.reject();
+          }
         }
+      );
+    }, this);
+
+    this._getObjectTypes(objectId).then(function (types) {
+      if (hasType(types)) {
+        insertRecord();
+      } else {
+        deferred.reject("object does not have given type");
       }
-    );
+    });
 
     return deferred.promise;
   },
@@ -240,9 +257,9 @@ module.exports = {
 
     var deferred = when.defer();
 
-    this._getObjectTypes(hsObj.id).then(function (objTypes) {
-      _.each(objTypes, function (objType) {
-        hsObj.addType(new HiveShareType(objType.value));
+    this._getObjectTypes(hsObj.id).then(function (types) {
+      _.each(types, function (type) {
+        hsObj.addType(type);
       });
       deferred.resolve(hsObj);
     });
@@ -255,17 +272,21 @@ module.exports = {
     var deferred = when.defer();
 
     this.db.view("hiveshare", "object_types", {key: id}, function (err, body) {
-      deferred.resolve(body.rows);
+      deferred.resolve(
+        _.map(body.rows, function (row) {
+          return new HiveShareType(row.value);
+        })
+      );
     });
 
     return deferred.promise;
   },
 
-  getObjectValue: function (objectId, tagId) {
+  getObjectValue: function (objectId, tagId, typeId) {
 
     var deferred = when.defer();
 
-    this.db.view("hiveshare", "object_values", {key: [objectId, tagId]},
+    this.db.view("hiveshare", "object_values", {key: [objectId, tagId, typeId]},
       function (err, body) {
         deferred.resolve(body.rows[0].value);
       }
@@ -294,7 +315,7 @@ module.exports = {
 
     this._getTypeTags(hsType.id).then(function (tags) {
       _.each(tags, function (tag) {
-        hsType.addTag(new HiveShareTag(tag.value));
+        hsType.addTag(new HiveShareTag(tag.value, hsType.id));
       });
       deferred.resolve(hsType);
     });
@@ -318,9 +339,9 @@ module.exports = {
 
     var deferred = when.defer();
 
-    if (hsQuery.q.tag_id) {
+    if (hsQuery.q.tag_id && hsQuery.q.tag_type_id) {
 
-      var tag = new HiveShareTag(hsQuery.q.tag_id);
+      var tag = new HiveShareTag(hsQuery.q.tag_id, hsQuery.q.tag_type_id);
       deferred.resolve(tag);
 
     }
