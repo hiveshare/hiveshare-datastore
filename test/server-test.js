@@ -101,7 +101,7 @@ buster.testCase("HiveShare Data Model", {
         },
 
         function () {
-          return server.createTag();
+          return server.createTag(newTypeId);
         },
         function (tag) {
           newTagId = tag.id;
@@ -212,22 +212,6 @@ buster.testCase("HiveShare Data Model", {
   },
 
   "Tags": {
-    "Can be created": function (done) {
-      pipeline([
-        function () {
-          return server.start("test");
-        },
-        function () {
-          return server.createTag();
-        }
-      ]).then(function (tagObj) {
-        try {
-          assert(!!tagObj.id);
-        } finally {
-          done();
-        }
-      }, logError(done));
-    },
 
     "Newly created tags can be found": function (done) {
       var newTag;
@@ -236,7 +220,10 @@ buster.testCase("HiveShare Data Model", {
           return server.start("test");
         },
         function () {
-          return server.createTag();
+          return server.createType();
+        },
+        function (typeObj) {
+          return server.createTag(typeObj.id);
         },
         function (tagObj) {
           newTag = tagObj;
@@ -249,6 +236,23 @@ buster.testCase("HiveShare Data Model", {
           done();
         }
       }, logError(done));
+    },
+
+    "Tags cannot be created when not part of a type": function (done) {
+      var newTag;
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createTag();
+        }
+      ]).then(function () {
+
+      }, function (err) {
+        assert(err);
+        done();
+      });
     }
   }
 

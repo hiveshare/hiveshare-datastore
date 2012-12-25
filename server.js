@@ -136,25 +136,37 @@ module.exports = {
     return deferred.promise;
   },
 
-  createTag: function () {
+  createTag: function (typeId) {
 
     var deferred = when.defer();
     var tagObject;
 
-    when.chain(pipeline([
+    if (!typeId) {
 
-      _.bind(this.createObject, this),
+      deferred.reject("No type");
 
-      _.bind(function (id) {
-        tagObject = new HiveShareTag(id);
-        return this.addTypeToObject(id, HiveShareDataModel.TAG_TYPE_ID);
-      }, this),
+    } else {
 
-      function () {
-        return tagObject;
-      }
+      when.chain(pipeline([
 
-    ]), deferred);
+        _.bind(this.createObject, this),
+
+        _.bind(function (id) {
+          tagObject = new HiveShareTag(id);
+          return this.addTypeToObject(id, HiveShareDataModel.TAG_TYPE_ID);
+        }, this),
+
+        _.bind(function () {
+          this.addTagToType(typeId, tagObject.id);
+        }, this),
+
+        function () {
+          return tagObject;
+        }
+
+      ]), deferred);
+
+    }
 
     return deferred.promise;
 
