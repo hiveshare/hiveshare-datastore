@@ -120,8 +120,72 @@ buster.testCase("HiveShare Data Model", {
       });
     },
 
-    "//Can add a tag to a type": function () {
+    "Can add a tag to a type": function (done) {
+      var newId;
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createType();
+        },
+        function (type) {
+          newId = type.id;
+          return server.addTagToType(newId, 1);
+        },
+        function () {
+          return server.getType(new Query().findTypeById(newId));
+        }
+      ]).then(function (result) {
+        try {
+          assert.equals(_.values(result.tags).length, 1);
+          assert.equals(_.keys(result.tags)[0], 1);
+          assert.equals(_.values(result.tags)[0].id, 1);
+        } finally {
+          done();
+        }
+      });
+    }
+  },
 
+  "Tags": {
+    "Can be created": function (done) {
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createTag();
+        }
+      ]).then(function (tagObj) {
+        try {
+          assert(!!tagObj.id);
+        } finally {
+          done();
+        }
+      });
+    },
+
+    "Newly created tags can be found": function (done) {
+      var newTag;
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.createTag();
+        },
+        function (tagObj) {
+          newTag = tagObj;
+          return server.getTag(new Query().findTagById(newTag.id));
+        }
+      ]).then(function (result) {
+        try {
+          assert.equals(result, newTag);
+        } finally {
+          done();
+        }
+      });
     }
   }
 
