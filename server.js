@@ -1,7 +1,7 @@
 var _ = require("underscore");
 var when = require("when");
 
-var mongodb = require("mongodb");
+var nano = require("nano");
 
 var HiveShareDataModel = require("hiveshare-datamodel");
 var HiveShareObject = HiveShareDataModel.HiveShareObject;
@@ -9,45 +9,65 @@ var HiveShareType = HiveShareDataModel.HiveShareType;
 
 module.exports = {
 
-  start: function (collectionSuffix) {
-
-    var mongoserver = new mongodb.Server("127.0.0.1", 27017, {});
-    var db_connector = new mongodb.Db("hiveshare", mongoserver, {w: 1});
+  start: function (dbSuffix) {
 
     var deferred = when.defer();
+    var couchdb = new nano("http://localhost:5984");
+    var dbName = "hiveshare" +
+      (dbSuffix ? ("_" + dbSuffix) : "");
 
-    db_connector.open(_.bind(function (err, db) {
-
-      if (!err) {
-
-        this.connection = db;
-        this.objectCollection = new mongodb.Collection(this.connection,
-          "object" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
-        this.typeCollection = new mongodb.Collection(this.connection,
-          "type" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
-        this.objectTypeCollection = new mongodb.Collection(this.connection,
-          "object_type" + (collectionSuffix ? ("_" + collectionSuffix) : ""));
-        deferred.resolve(true);
-
+    couchdb.db.list(_.bind(function (err, body) {
+      var notFound = !_.find(body, function (db) {
+        return db === dbName;
+      });
+      if (notFound) {
+        couchdb.db.create(dbName, _.bind(function (err, body) {
+          this._setDb(couchdb, dbName);
+          this._addViews().then(deferred.resolve);
+        }, this));
       } else {
-
-        deferred.reject(err);
-
+        this._setDb(couchdb, dbName);
+        deferred.resolve();
       }
-
     }, this));
 
     return deferred.promise;
-
   },
 
-  createObject: function () {
+  _setDb: function (couchdb, dbName) {
+    this.db = couchdb.db.use(dbName);
+  },
+
+  _addViews: function () {
 
     var deferred = when.defer();
 
-    this.objectCollection.insert({}, function (err, doc) {
+    this.db.insert({
+      "views": {
+        "object_types": {
+
+          "map": function (doc) {
+            if (doc.type === "object_type") {
+              emit(doc.object_id, doc.type_id);
+            }
+          }
+
+        }
+      }
+    }, "_design/hiveshare", function (err, body) {
+      deferred.resolve();
+    });
+
+    return deferred.promise;
+  },
+
+  createObject: function (type) {
+
+    var deferred = when.defer();
+
+    this.db.insert({type: type ? type : "object"}, null, function (err, doc) {
       if (!err) {
-        deferred.resolve(doc.length && doc[0]._id);
+        deferred.resolve(doc.id);
       } else {
         deferred.reject(err);
       }
@@ -61,28 +81,10 @@ module.exports = {
     var deferred = when.defer();
 
     //create object
-    this.createObject().then(_.bind(function (descriptorId) {
+    this.createObject("type").then(_.bind(function (id) {
         //create type, with object parameter
-        this._createType(descriptorId).then(deferred.resolve, deferred.reject);
+        deferred.resolve(new HiveShareType(id));
       }, this), deferred.reject);
-
-    return deferred.promise;
-  },
-
-  _createType: function (descriptorId) {
-    var deferred = when.defer();
-    var typeObj = {
-      descriptor_id: descriptorId
-    };
-
-    this.typeCollection.insert(typeObj, function (err, doc) {
-      if (!err) {
-        var id = doc[0]._id.toString();
-        deferred.resolve(new HiveShareType(id, descriptorId));
-      } else {
-        deferred.reject(err);
-      }
-    });
 
     return deferred.promise;
   },
@@ -90,12 +92,13 @@ module.exports = {
   addTypeToObject: function (objectId, typeId) {
 
     var deferred = when.defer();
-
-    this.objectTypeCollection.insert(
+    this.db.insert(
       {
-        objectId: mongodb.ObjectID(objectId),
-        typeId: typeId
+        object_id: objectId,
+        type_id: typeId,
+        type: "object_type"
       },
+      null,
       function (err, doc) {
         if (!err) {
           deferred.resolve();
@@ -129,16 +132,12 @@ module.exports = {
   _getObjects: function (hsQuery) {
 
     var deferred = when.defer();
-    var mQuery = {};
 
     if (hsQuery.q.object_id) {
-      mQuery._id = mongodb.ObjectID(hsQuery.q.object_id);
-    }
-    this.objectCollection
-      .find(mQuery, {limit: 2})
-      .toArray(function (err, docs) {
-        deferred.resolve(docs);
+      this.db.get(hsQuery.q.object_id, null, function (err, doc) {
+        deferred.resolve([doc]);
       });
+    }
 
     return deferred.promise;
   },
@@ -147,9 +146,9 @@ module.exports = {
 
     var deferred = when.defer();
 
-    this._getObjectTypes(hsObj.id).then(function (types) {
-      _.each(types, function (type) {
-        hsObj.addType(new HiveShareType(type.typeId));
+    this._getObjectTypes(hsObj.id).then(function (objTypes) {
+      _.each(objTypes, function (objType) {
+        hsObj.addType(new HiveShareType(objType.value));
       });
       deferred.resolve(hsObj);
     });
@@ -160,15 +159,12 @@ module.exports = {
   _getObjectTypes: function (id) {
 
     var deferred = when.defer();
-
     var query = {
-      "objectId": mongodb.ObjectID(id)
+      "objectId": id
     };
-    this.objectTypeCollection
-      .find(query, {limit: 2})
-      .toArray(function (err, docs) {
-        deferred.resolve(docs);
-      });
+    this.db.view("hiveshare", "object_types", {key: id}, function (err, body) {
+      deferred.resolve(body.rows);
+    });
 
     return deferred.promise;
   },
@@ -176,23 +172,16 @@ module.exports = {
   getType: function (hsQuery) {
 
     var deferred = when.defer();
-    var mQuery = {};
 
     if (hsQuery.q.type_id) {
-      mQuery._id = mongodb.ObjectID(hsQuery.q.type_id);
-    }
-    this.typeCollection
-      .find(mQuery, {limit: 1})
-      .toArray(function (err, docs) {
-        if (docs[0]) {
-          var typeDoc = docs[0];
-          deferred.resolve(
-            new HiveShareType(typeDoc._id, typeDoc.descriptor_id)
-          );
+      this.db.get(hsQuery.q.type_id, null, function (err, body) {
+        if (body) {
+          deferred.resolve(new HiveShareType(body._id));
         } else {
           deferred.resolve(null);
         }
       });
+    }
 
     return deferred.promise;
   }

@@ -92,7 +92,6 @@ buster.testCase("HiveShare Data Model", {
       ]).then(function (typeObj) {
         try {
           assert(!!typeObj.id);
-          assert(!!typeObj.descriptorId);
         } finally {
           done();
         }
