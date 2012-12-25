@@ -6,23 +6,15 @@ var Query = require("hiveshare-datamodel").Query;
 
 var server = require("../server.js");
 
+var logError = function (done) {
+  return function (err) {
+    console.log(err);
+    done();
+  };
+};
+
 buster.testCase("HiveShare Data Model", {
   "Objects": {
-
-    "Can be added": function (done) {
-
-      pipeline([
-        function () {
-          return server.start("test");
-        },
-        function () {
-          return server.createObject();
-        }
-      ]).then(function (id) {
-        assert(!!id);
-        done();
-      });
-    },
 
     "Newly created objects can be found": function (done) {
 
@@ -42,16 +34,19 @@ buster.testCase("HiveShare Data Model", {
         try {
           assert.equals(result.length, 1);
           assert.equals(result[0].id, newId);
+          var types = _.keys(result[0].types);
+          assert.equals(types.length, 1, "Has a type");
+          assert.equals(types[0], HiveShareDataModel.DEFAULT_TYPE_ID, "Is the default type");
         } finally {
           done();
         }
-      });
+      }, logError(done));
 
     },
 
     "Can add a type to an object": function (done) {
 
-      var newId;
+      var newObjectId, newTypeId;
       pipeline([
         function () {
           return server.start("test");
@@ -59,22 +54,76 @@ buster.testCase("HiveShare Data Model", {
         function () {
           return server.createObject();
         },
-        function (id) {
-          newId = id.toString();
-          return server.addTypeToObject(newId, 1);
+        function (objectId) {
+          newObjectId = objectId;
+          return server.createType();
+        },
+        function (type) {
+          newTypeId = type.id;
+          return server.addTypeToObject(newObjectId, newTypeId);
         },
         function () {
-          return server.getObjects(new Query().findObjectById(newId));
+          return server.getObjects(new Query().findObjectById(newObjectId));
         }
       ]).then(function (result) {
         try {
-          assert.equals(_.values(result[0].types).length, 1);
-          assert.equals(_.keys(result[0].types)[0], 1);
-          assert.equals(_.values(result[0].types)[0].id, 1);
+          assert.equals(_.values(result[0].types).length, 2);
+          assert.equals(_.keys(result[0].types)[1], newTypeId);
+          assert.equals(_.values(result[0].types)[1].id, newTypeId);
         } finally {
           done();
         }
-      });
+      }, logError(done));
+    },
+
+    "//Cannot add a type which does exist to an object": function () {
+
+    },
+
+    "//Can add a tag value to an object which has the tag": function (done) {
+
+      // var newObjectId, newTypeId;
+
+      // pipeline([
+      //   function () {
+      //     return server.start("test");
+      //   },
+      //   function () {
+      //     return server.createObject();
+      //   },
+      //   function (objectId) {
+      //     newObjectId = objectId;
+      //     return server.createType();
+      //   },
+      //   function (type) {
+      //     newTypeId = type.id;
+      //     return server.addTypeToObject(newObjectId, newTypeId);
+      //   },
+      //   function () {
+      //     return server.getObjects(new Query().findObjectById(newId));
+      //   }
+      // ]).then(function (result) {
+      //   try {
+      //   } finally {
+      //     done();
+      //   }
+      // }, logError(done));
+    },
+
+    "//Cannot add a tag value to an object which does not have the tag": function () {
+
+    },
+
+    "//Can only add tag values of the correct type": function () {
+
+    },
+
+    "//Can query objects by type": function () {
+
+    },
+
+    "//Can query objects query by tag value": function () {
+
     }
 
   },
@@ -117,7 +166,7 @@ buster.testCase("HiveShare Data Model", {
         } finally {
           done();
         }
-      });
+      }, logError(done));
     },
 
     "Can add a tag to a type": function (done) {
@@ -144,7 +193,7 @@ buster.testCase("HiveShare Data Model", {
         } finally {
           done();
         }
-      });
+      }, logError(done));
     }
   },
 
@@ -163,7 +212,7 @@ buster.testCase("HiveShare Data Model", {
         } finally {
           done();
         }
-      });
+      }, logError(done));
     },
 
     "Newly created tags can be found": function (done) {
@@ -185,7 +234,7 @@ buster.testCase("HiveShare Data Model", {
         } finally {
           done();
         }
-      });
+      }, logError(done));
     }
   }
 

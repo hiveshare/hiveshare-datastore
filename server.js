@@ -1,7 +1,9 @@
 var _ = require("underscore");
 var when = require("when");
+var pipeline = require("when/pipeline");
 
 var nano = require("nano");
+var uuid = require('node-uuid');
 
 var HiveShareDataModel = require("hiveshare-datamodel");
 var HiveShareObject = HiveShareDataModel.HiveShareObject;
@@ -72,30 +74,32 @@ module.exports = {
     return deferred.promise;
   },
 
-  createObject: function (type) {
+  createObject: function () {
 
-    var deferred = when.defer();
+    return this.addTypeToObject(uuid.v1().replace(/\-/g, ""),
+      HiveShareDataModel.DEFAULT_TYPE_ID);
 
-    this.db.insert({type: type ? type : "object"}, null, function (err, doc) {
-      if (!err) {
-        deferred.resolve(doc.id);
-      } else {
-        deferred.reject(err);
-      }
-    });
-
-    return deferred.promise;
   },
 
   createType: function () {
 
     var deferred = when.defer();
+    var typeObject;
 
-    //create object
-    this.createObject("type").then(_.bind(function (id) {
-        //create type, with object parameter
-        deferred.resolve(new HiveShareType(id));
-      }, this), deferred.reject);
+    when.chain(pipeline([
+
+      _.bind(this.createObject, this),
+
+      _.bind(function (id) {
+        typeObject = new HiveShareType(id);
+        return this.addTypeToObject(id, HiveShareDataModel.TYPE_TYPE_ID);
+      }, this),
+
+      function () {
+        return typeObject;
+      }
+
+    ]), deferred);
 
     return deferred.promise;
   },
@@ -112,7 +116,7 @@ module.exports = {
       null,
       function (err, doc) {
         if (!err) {
-          deferred.resolve();
+          deferred.resolve(objectId, typeId);
         } else {
           deferred.reject();
         }
@@ -125,14 +129,25 @@ module.exports = {
   createTag: function () {
 
     var deferred = when.defer();
+    var tagObject;
 
-    //create object
-    this.createObject("tag").then(_.bind(function (id) {
-        //create type, with object parameter
-        deferred.resolve(new HiveShareTag(id));
-      }, this), deferred.reject);
+    when.chain(pipeline([
+
+      _.bind(this.createObject, this),
+
+      _.bind(function (id) {
+        tagObject = new HiveShareTag(id);
+        return this.addTypeToObject(id, HiveShareDataModel.TAG_TYPE_ID);
+      }, this),
+
+      function () {
+        return tagObject;
+      }
+
+    ]), deferred);
 
     return deferred.promise;
+
   },
 
   addTagToType: function (typeId, tagId) {
@@ -161,28 +176,15 @@ module.exports = {
 
     var deferred = when.defer();
 
-    this._getObjects(query).then(_.bind(function (objectDocs) {
-      var hsObjs = _.map(objectDocs, function (doc) {
-        return new HiveShareObject(doc._id.toString());
-      });
-      when.map(hsObjs, _.bind(this._populateObjectTypes, this))
-        .then(function () {
-          deferred.resolve(hsObjs);
-        }
-      );
-    }, this));
-
-    return deferred.promise;
-  },
-
-  _getObjects: function (hsQuery) {
-
-    var deferred = when.defer();
-
-    if (hsQuery.q.object_id) {
-      this.db.get(hsQuery.q.object_id, null, function (err, doc) {
-        deferred.resolve([doc]);
-      });
+    if (query.q.object_id) {
+      var hsObj = new HiveShareObject(query.q.object_id);
+      this._populateObjectTypes(hsObj)
+          .then(
+            function () {
+              deferred.resolve([hsObj]);
+            },
+            deferred.reject
+          );
     }
 
     return deferred.promise;
@@ -220,14 +222,10 @@ module.exports = {
     var deferred = when.defer();
 
     if (hsQuery.q.type_id) {
-      this.db.get(hsQuery.q.type_id, null, _.bind(function (err, body) {
-        if (body) {
-          var type = new HiveShareType(body._id);
-          this._populateTypeTags(type).then(deferred.resolve);
-        } else {
-          deferred.resolve(null);
-        }
-      }, this));
+
+      var type = new HiveShareType(hsQuery.q.type_id);
+      when.chain(this._populateTypeTags(type), deferred);
+
     }
 
     return deferred.promise;
@@ -264,16 +262,14 @@ module.exports = {
     var deferred = when.defer();
 
     if (hsQuery.q.tag_id) {
-      this.db.get(hsQuery.q.tag_id, null, function (err, body) {
-        if (body) {
-          deferred.resolve(new HiveShareTag(body._id));
-        } else {
-          deferred.resolve(null);
-        }
-      });
+
+      var tag = new HiveShareTag(hsQuery.q.tag_id);
+      deferred.resolve(tag);
+
     }
 
     return deferred.promise;
+
   }
 
 };
