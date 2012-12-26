@@ -76,6 +76,29 @@ buster.testCase("HiveShare Data Model", {
       }, logError(done));
     },
 
+    "Cannot get an object which does not exist": function (done) {
+
+      var newObjectId, newTypeId;
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.getObjects(new Query().findObjectById("some id"));
+        }
+      ]).then(
+        function (result) {
+          assert(false);
+          done();
+        }, function (err) {
+          assert(err);
+          done();
+        }
+      );
+
+
+    },
+
     "//Cannot add a type which does exist to an object": function () {
 
     },

@@ -244,7 +244,11 @@ module.exports = {
       this._populateObjectTypes(hsObj)
           .then(
             function () {
-              deferred.resolve([hsObj]);
+              if (_.keys(hsObj.types).length > 0) {
+                deferred.resolve([hsObj]);
+              } else {
+                deferred.reject("Object does not exist");
+              }
             },
             deferred.reject
           );
