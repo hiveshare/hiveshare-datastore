@@ -16,7 +16,7 @@ var logError = function (done) {
 buster.testCase("HiveShare Data Model", {
   "Objects": {
 
-    "//Newly created objects can be found": function (done) {
+    "Newly created objects can be found": function (done) {
 
       var newId;
       pipeline([
@@ -24,13 +24,16 @@ buster.testCase("HiveShare Data Model", {
           return server.start("test");
         },
         function () {
+          console.log("create object")
           return server.createObject();
         },
         function (id) {
+          console.log("created with id", id)
           newId = id.toString();
           return server.getObjects(new Query().findObjectById(newId));
         }
       ]).then(function (result) {
+        console.log("queried and found:", result)
         try {
           assert.equals(result.length, 1);
           assert.equals(result[0].id, newId);
