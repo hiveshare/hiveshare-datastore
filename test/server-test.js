@@ -16,7 +16,7 @@ var logError = function (done) {
 buster.testCase("HiveShare Data Model", {
   "Objects": {
 
-    "Newly created objects can be found": function (done) {
+    "//Newly created objects can be found": function (done) {
 
       var newId;
       pipeline([
