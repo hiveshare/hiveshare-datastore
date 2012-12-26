@@ -33,14 +33,19 @@ buster.testCase("HiveShare Data Model", {
           return server.getObjects(new Query().findObjectById(newId));
         }
       ]).then(function (result) {
-        console.log("queried and found:", result)
+        console.log("queried and found:", JSON.stringify(result))
         try {
+          console.log("test 1")
           assert.equals(result.length, 1);
+          console.log("test 2")
           assert.equals(result[0].id, newId);
           var types = _.keys(result[0].types);
+          console.log("test 3")
           assert.equals(types.length, 1, "Has a type");
+          console.log("test 4")
           assert.equals(types[0], HiveShareDataModel.DEFAULT_TYPE_ID, "Is the default type");
         } finally {
+          console.log("calling done")
           done();
         }
       }, logError(done));
