@@ -15,22 +15,21 @@ module.exports = {
   start: function (dbSuffix) {
 
     var deferred = when.defer();
-    var couchdb = new nano("http://localhost:5984");
-    var dbName = "hiveshare" +
+    this.couchdb = new nano("http://localhost:5984");
+    this.dbName = "hiveshare" +
       (dbSuffix ? ("_" + dbSuffix) : "");
+    this.couchdb.db.list(_.bind(function (err, body) {
 
-    couchdb.db.list(_.bind(function (err, body) {
-
-      var notFound = !_.find(body, function (db) {
-        return db === dbName;
-      });
+      var notFound = !_.find(body, _.bind(function (db) {
+        return db === this.dbName;
+      }, this));
       if (notFound) {
-        couchdb.db.create(dbName, _.bind(function (err, body) {
-          this._setDb(couchdb, dbName);
+        this.couchdb.db.create(this.dbName, _.bind(function (err, body) {
+          this._setDb(this.dbName);
           this._setupInitialData().then(deferred.resolve);
         }, this));
       } else {
-        this._setDb(couchdb, dbName);
+        this._setDb(this.dbName);
         deferred.resolve();
       }
     }, this));
@@ -38,8 +37,8 @@ module.exports = {
     return deferred.promise;
   },
 
-  _setDb: function (couchdb, dbName) {
-    this.db = couchdb.db.use(dbName);
+  _setDb: function (dbName) {
+    this.db = this.couchdb.db.use(dbName);
   },
 
   _setupInitialData: function () {
@@ -144,6 +143,10 @@ module.exports = {
     );
 
     return deferred.promise;
+  },
+
+  destroy: function () {
+    this.couchdb.db.destroy(this.dbName);
   },
 
   createObject: function () {

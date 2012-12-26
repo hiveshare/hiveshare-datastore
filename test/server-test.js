@@ -17,6 +17,11 @@ buster.testCase("HiveShare Data Model", {
 
   setUp: function () {
     this.timeout = 1000;
+    return server.start("test");
+  },
+
+  tearDown: function () {
+    return server.destroy();
   },
 
   "Objects": {
@@ -25,9 +30,6 @@ buster.testCase("HiveShare Data Model", {
 
       var newId;
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createObject();
         },
@@ -54,9 +56,6 @@ buster.testCase("HiveShare Data Model", {
       var newObjectId, newTypeId;
       pipeline([
         function () {
-          return server.start("test");
-        },
-        function () {
           return server.getObjects(new Query().findObjectById("some id"));
         }
       ]).then(
@@ -74,9 +73,6 @@ buster.testCase("HiveShare Data Model", {
 
       var newObjectId, newTypeId;
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createObject();
         },
@@ -107,9 +103,6 @@ buster.testCase("HiveShare Data Model", {
       var newObjectId, newTypeId;
       pipeline([
         function () {
-          return server.start("test");
-        },
-        function () {
           return server.createObject();
         },
         function (objectId) {
@@ -132,9 +125,6 @@ buster.testCase("HiveShare Data Model", {
       var newObjectId, newTypeId, newTagId;
 
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createObject();
         },
@@ -176,9 +166,6 @@ buster.testCase("HiveShare Data Model", {
 
       pipeline([
         function () {
-          return server.start("test");
-        },
-        function () {
           return server.createObject();
         },
         function (newObjectId) {
@@ -213,9 +200,6 @@ buster.testCase("HiveShare Data Model", {
     "Can be added": function (done) {
       pipeline([
         function () {
-          return server.start("test");
-        },
-        function () {
           return server.createType();
         }
       ]).then(function (typeObj) {
@@ -230,9 +214,6 @@ buster.testCase("HiveShare Data Model", {
     "Newly created types can be found": function (done) {
       var newType;
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createType();
         },
@@ -252,9 +233,6 @@ buster.testCase("HiveShare Data Model", {
     "Can add a tag to a type": function (done) {
       var newId;
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createType();
         },
@@ -283,9 +261,6 @@ buster.testCase("HiveShare Data Model", {
       var newTag, type;
       pipeline([
         function () {
-          return server.start("test");
-        },
-        function () {
           return server.createType();
         },
         function (typeObj) {
@@ -308,9 +283,6 @@ buster.testCase("HiveShare Data Model", {
     "Tags cannot be created when not part of a type": function (done) {
       var newTag;
       pipeline([
-        function () {
-          return server.start("test");
-        },
         function () {
           return server.createTag();
         }
