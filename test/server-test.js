@@ -31,6 +31,7 @@ buster.testCase("HiveShare Data Model", {
           return server.getObjects(new Query().findObjectById(newId));
         }
       ]).then(function (result) {
+        JSON.stringify(result);
         try {
           assert.equals(result.length, 1);
           assert.equals(result[0].id, newId);
