@@ -14,27 +14,18 @@ module.exports = {
 
   start: function (dbSuffix) {
 
-    console.log("starting")
-
     var deferred = when.defer();
     var couchdb = new nano("http://localhost:5984");
     var dbName = "hiveshare" +
       (dbSuffix ? ("_" + dbSuffix) : "");
 
-    console.log("connected to db")
-
     couchdb.db.list(_.bind(function (err, body) {
 
-      console.log("known dbs:")
-      console.log(body);
       var notFound = !_.find(body, function (db) {
         return db === dbName;
       });
-      console.log("found db", dbName, "?", notFound)
       if (notFound) {
         couchdb.db.create(dbName, _.bind(function (err, body) {
-          console.log("created")
-          console.log(arguments)
           this._setDb(couchdb, dbName);
           this._setupInitialData().then(deferred.resolve);
         }, this));
@@ -189,8 +180,6 @@ module.exports = {
 
     var deferred = when.defer();
 
-    console.log("add type", arguments)
-
     var isType = function (types) {
       return _.find(types, function (type) {
         return type.id === HiveShareDataModel.TYPE_TYPE_ID;
@@ -218,7 +207,6 @@ module.exports = {
 
     //get types for object with type id
     this._getObjectTypes(typeId).then(function (types) {
-      console.log("check type: ", types)
       //type id should have a type of type type_type
       if (isType(types)) {
         insertRecord();
