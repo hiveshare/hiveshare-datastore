@@ -14,17 +14,27 @@ module.exports = {
 
   start: function (dbSuffix) {
 
+    console.log("starting")
+
     var deferred = when.defer();
     var couchdb = new nano("http://localhost:5984");
     var dbName = "hiveshare" +
       (dbSuffix ? ("_" + dbSuffix) : "");
 
+    console.log("connected to db")
+
     couchdb.db.list(_.bind(function (err, body) {
+
+      console.log("known dbs:")
+      console.log(body);
       var notFound = !_.find(body, function (db) {
         return db === dbName;
       });
+      console.log("found db", dbName, "?", notFound)
       if (notFound) {
         couchdb.db.create(dbName, _.bind(function (err, body) {
+          console.log("created")
+          console.log(arguments)
           this._setDb(couchdb, dbName);
           this._setupInitialData().then(deferred.resolve);
         }, this));
