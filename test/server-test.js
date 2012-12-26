@@ -44,6 +44,27 @@ buster.testCase("HiveShare Data Model", {
 
     },
 
+    "Cannot get an object which does not exist": function (done) {
+
+      var newObjectId, newTypeId;
+      pipeline([
+        function () {
+          return server.start("test");
+        },
+        function () {
+          return server.getObjects(new Query().findObjectById("some id"));
+        }
+      ]).then(
+        function (result) {
+          assert(false);
+          done();
+        }, function (err) {
+          assert(err);
+          done();
+        }
+      );
+    },
+
     "Can add a type to an object": function (done) {
 
       var newObjectId, newTypeId;
@@ -76,15 +97,19 @@ buster.testCase("HiveShare Data Model", {
       }, logError(done));
     },
 
-    "Cannot get an object which does not exist": function (done) {
 
+    "Cannot add a type which does exist to an object": function (done) {
       var newObjectId, newTypeId;
       pipeline([
         function () {
           return server.start("test");
         },
         function () {
-          return server.getObjects(new Query().findObjectById("some id"));
+          return server.createObject();
+        },
+        function (objectId) {
+          newObjectId = objectId;
+          return server.addTypeToObject(newObjectId, "some type id");
         }
       ]).then(
         function (result) {
@@ -95,12 +120,6 @@ buster.testCase("HiveShare Data Model", {
           done();
         }
       );
-
-
-    },
-
-    "//Cannot add a type which does exist to an object": function () {
-
     },
 
     "Can add a tag value to an object which has the tag": function (done) {
@@ -170,15 +189,15 @@ buster.testCase("HiveShare Data Model", {
       });
     },
 
-    "//Can only add tag values of the correct type": function () {
+    "//Can only add tag values of the correct type": function (done) {
 
     },
 
-    "//Can query objects by type": function () {
+    "//Can query objects by type": function (done) {
 
     },
 
-    "//Can query objects query by tag value": function () {
+    "//Can query objects query by tag value": function (done) {
 
     }
 

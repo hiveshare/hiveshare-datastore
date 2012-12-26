@@ -26,7 +26,7 @@ module.exports = {
       if (notFound) {
         couchdb.db.create(dbName, _.bind(function (err, body) {
           this._setDb(couchdb, dbName);
-          this._addViews().then(deferred.resolve);
+          this._setupInitialData().then(deferred.resolve);
         }, this));
       } else {
         this._setDb(couchdb, dbName);
@@ -39,6 +39,13 @@ module.exports = {
 
   _setDb: function (couchdb, dbName) {
     this.db = couchdb.db.use(dbName);
+  },
+
+  _setupInitialData: function () {
+    return when.all([
+      this._addViews(),
+      this._addInitialObjects()
+    ]);
   },
 
   _addViews: function () {
@@ -84,6 +91,60 @@ module.exports = {
     return deferred.promise;
   },
 
+  _addInitialObjects: function () {
+
+    var deferred = when.defer();
+
+    this.db.bulk(
+      {
+        docs: [
+          {
+            object_id: 1,
+            type_id: 1,
+            type: "object_type"
+          },
+          {
+            object_id: 1,
+            type_id: 2,
+            type: "object_type"
+          },
+
+          {
+            object_id: 2,
+            type_id: 1,
+            type: "object_type"
+          },
+          {
+            object_id: 2,
+            type_id: 2,
+            type: "object_type"
+          },
+
+          {
+            object_id: 3,
+            type_id: 1,
+            type: "object_type"
+          },
+          {
+            object_id: 3,
+            type_id: 2,
+            type: "object_type"
+          }
+        ]
+      },
+      null,
+      function (err, doc) {
+        if (!err) {
+          deferred.resolve();
+        } else {
+          deferred.reject();
+        }
+      }
+    );
+
+    return deferred.promise;
+  },
+
   createObject: function () {
 
     return this.addTypeToObject(uuid.v1().replace(/\-/g, ""),
@@ -117,21 +178,44 @@ module.exports = {
   addTypeToObject: function (objectId, typeId) {
 
     var deferred = when.defer();
-    this.db.insert(
-      {
-        object_id: objectId,
-        type_id: typeId,
-        type: "object_type"
-      },
-      null,
-      function (err, doc) {
-        if (!err) {
-          deferred.resolve(objectId, typeId);
-        } else {
-          deferred.reject();
+
+    var isType = function (types) {
+      return _.find(types, function (type) {
+        return type.id === HiveShareDataModel.TYPE_TYPE_ID;
+      });
+    };
+
+    var insertRecord = _.bind(function () {
+
+      this.db.insert(
+        {
+          object_id: objectId,
+          type_id: typeId,
+          type: "object_type"
+        },
+        null,
+        function (err, doc) {
+          if (!err) {
+            deferred.resolve(objectId, typeId);
+          } else {
+            deferred.reject();
+          }
         }
+      );
+    }, this);
+
+    //get types for object with type id
+    this._getObjectTypes(typeId).then(function (types) {
+
+      //type id should have a type of type type_type
+      if (isType(types)) {
+        insertRecord();
+      } else {
+        deferred.reject("type not known");
       }
-    );
+    }, function (err) {
+      deferred.reject(err);
+    });
 
     return deferred.promise;
   },
