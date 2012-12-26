@@ -189,6 +189,8 @@ module.exports = {
 
     var deferred = when.defer();
 
+    console.log("add type", arguments)
+
     var isType = function (types) {
       return _.find(types, function (type) {
         return type.id === HiveShareDataModel.TYPE_TYPE_ID;
@@ -216,7 +218,7 @@ module.exports = {
 
     //get types for object with type id
     this._getObjectTypes(typeId).then(function (types) {
-
+      console.log("check type: ", types)
       //type id should have a type of type type_type
       if (isType(types)) {
         insertRecord();
